@@ -19,20 +19,19 @@ export const filterDocumentDataRange = (
 ): FilterSheetRangeInfo => {
   if (dataFromGs.length <= 0) return {firstRow: -1, lastRow: -1};
 
+  let toReturn: FilterSheetRangeInfo = {firstRow: -1, lastRow: -1};
+  for (const dataIndex in dataFromGs) {
+    const currentData = dataFromGs[dataIndex];
 
-  return dataFromGs.forEach((data) => {
-    let firstRow = -1;
-    let secondRow 
-  })
+    if (currentData.includes(docId)) {
+      // If the value of first row is <= 0, meaning this is the first
+      // time this condition is true, update firstRow value
+      if (toReturn.firstRow <= 0) toReturn.firstRow = parseInt(dataIndex) + 1;
+      else toReturn.lastRow = parseInt(dataIndex) + 1;
+    }
+  }
 
-  const firstRow = dataFromGs.findIndex((item) => item.includes(docId));
-
-  const lastRow = 
-
-  return {
-    firstRow: firstRow > 0 ? firstRow + 1 : firstRow,
-    lastRow: lastRow > 0 ? lastRow + 1 : lastRow,
-  };
+  return toReturn;
 };
 
 /**
