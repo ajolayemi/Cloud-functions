@@ -2,6 +2,7 @@ import * as logger from "firebase-functions/logger";
 import {
   onDocumentCreated,
   onDocumentUpdated,
+  onDocumentDeleted,
 } from "firebase-functions/v2/firestore";
 import {setGlobalOptions} from "firebase-functions/v2";
 import {SurveyTypes} from "../shared/shared_enums";
@@ -18,6 +19,10 @@ import {SheetInfoImpl} from "../models/sheet_info_model";
 // Set the maximum instances to 10 for all functions
 setGlobalOptions({maxInstances: 10});
 
+/**
+ * Responds to update events on firestore documents from firebase
+ * It mostly handles that passes over to google sheet the new data
+ */
 exports.onSurveyUpdated = onDocumentUpdated(
   "survey/{docId}",
   async (updateEvent) => {
