@@ -1,4 +1,4 @@
-import {SheetInfo} from "../interfaces/shared_interfaces";
+import {FilterSheetRangeInfo, SheetInfo} from "../interfaces/shared_interfaces";
 
 /**
  * A class implementation of sheet info
@@ -17,15 +17,13 @@ export class SheetInfoImpl {
   /**
    *
    * @param {SheetInfo} sheetInfo The base sheet info
-   * @param {number} firstRow The first row to include in the range
-   * @param {number} lastRow The last row to include in the range
+   * @param {FilterSheetRangeInfo} ranges The ranges to be updated
    * @return {string} An A1 notation range
    */
   static getUpdateA1NotionRange(
     sheetInfo: SheetInfo,
-    firstRow: number,
-    lastRow: number
+    ranges: FilterSheetRangeInfo
   ): string {
-    return `${sheetInfo.name}!${sheetInfo.firstColumn}${firstRow}:${sheetInfo.lastColumn}${lastRow}`;
+    return `${sheetInfo.name}!${sheetInfo.firstColumn}${ranges.firstRow}:${sheetInfo.lastColumn}${ranges.lastRow}`;
   }
 }

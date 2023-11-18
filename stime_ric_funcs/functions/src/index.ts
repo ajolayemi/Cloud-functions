@@ -5,11 +5,13 @@ import {
 } from "firebase-functions/v2/firestore";
 import {setGlobalOptions} from "firebase-functions/v2";
 import {SurveyTypes} from "../shared/shared_enums";
-import {processQualitySurveyDataForGs} from "../shared/utils";
+import {
+  handleSurveyInsertAndUpdate,
+  processQualitySurveyDataForGs,
+} from "../shared/utils";
 import {qualitySurveyResultSheet} from "../shared/configs";
 import {
   filterDocumentDataRange,
-  insertDataInSheet,
   readDataFromSpreadsheet,
 } from "./google_sheet_utils";
 import {SheetInfoImpl} from "../models/sheet_info_model";
@@ -45,17 +47,44 @@ exports.onSurveyUpdated = onDocumentUpdated(
           qualitySurveyDataFromGs,
           docId
         );
-        console.log(filterRange);
-        // Filter out the current index (row number) where this survey data is
-        // currently saved on google sheet
 
-        // const forGs = processQualitySurveyDataForGs(updatedDocumentData);
-        // If a valid data was returned
-        // if (forGs.length <= 0 || !docId) return;
-        // forGs.unshift(docId);
+        const dataForGs = processQualitySurveyDataForGs(updatedDocumentData);
 
-        // Write data to google sheet
-        // await insertDataInSheet(qualitySurveyResultSheet.name, [forGs]);
+        // if either of the firstRow or lastRow in range is <= 0
+        // This means that the said survey has never being saved to
+        // google sheet, in that case, add it
+        if (filterRange.firstRow <= 0 || filterRange.lastRow <= 0) {
+          await handleSurveyInsertAndUpdate(
+            [dataForGs],
+            qualitySurveyResultSheet,
+            docId,
+            true,
+            true
+          );
+          logger.info(
+            `Document with id: ${docId} info was not found in google sheet,
+            it's been added successfully`
+          );
+          return;
+        }
+
+        // In other cases, update the data already saved in google sheet
+        const rangeForUpdateString = SheetInfoImpl.getUpdateA1NotionRange(
+          qualitySurveyResultSheet,
+          filterRange
+        );
+        await handleSurveyInsertAndUpdate(
+          [dataForGs],
+          qualitySurveyResultSheet,
+          docId,
+          true,
+          false,
+          true,
+          rangeForUpdateString
+        );
+        logger.info(
+          `Document with id: ${docId} data was updated in google sheet successfully`
+        );
         return;
       }
       console.log("Was a quantity survey");
@@ -90,12 +119,13 @@ exports.onNewSurveyCreated = onDocumentCreated(
         console.log("Was a quality survey");
         const docId = docEvent.data?.id;
         const forGs = processQualitySurveyDataForGs(newData);
-        // If a valid data was returned
-        if (forGs.length <= 0 || !docId) return;
-        forGs.unshift(docId);
-
-        // Write data to google sheet
-        await insertDataInSheet(qualitySurveyResultSheet.name, [forGs]);
+        await handleSurveyInsertAndUpdate(
+          [forGs],
+          qualitySurveyResultSheet,
+          docId,
+          true,
+          true
+        );
 
         return;
       }
