@@ -12,12 +12,59 @@ import {
 } from "../shared/utils";
 import {qualitySurveyResultSheet} from "../shared/configs";
 import {
+  deleteRowFromSheet,
   filterDocumentDataRange,
   readDataFromSpreadsheet,
 } from "./google_sheet_utils";
 import {SheetInfoImpl} from "../models/sheet_info_model";
 // Set the maximum instances to 10 for all functions
 setGlobalOptions({maxInstances: 10});
+
+
+/**
+ * Responds to delete events on survey documents
+ */
+exports.onSurveyDeleted = onDocumentDeleted(
+  "survey/{docId}",
+  async (deleteEvent) => {
+    try {
+      const docId = deleteEvent.data?.id;
+      const data = deleteEvent.data?.data();
+
+      if (!data || !docId) {
+        logger.info(
+          `Was not able to access the data / doc id of the deleted doc with id: ${docId}`
+        );
+        return;
+      }
+      const deletedDocumentType: SurveyTypes = data.surveyType;
+      if (deletedDocumentType == SurveyTypes.Quality) {
+        const qualitySurveyDataFromGs = await readDataFromSpreadsheet(
+          SheetInfoImpl.getReadA1NotationRange(qualitySurveyResultSheet)
+        );
+        const filterRange = filterDocumentDataRange(
+          qualitySurveyDataFromGs,
+          docId
+        );
+
+        if (filterRange.firstRow <= 0 || filterRange.lastRow <= 0) return;
+
+        await deleteRowFromSheet(
+          qualitySurveyResultSheet.id,
+          filterRange.firstRow - 1,
+          filterRange.lastRow
+        );
+        return;
+      }
+
+      return;
+    } catch (error) {
+      logger.error(
+        `An error occurred while trying to handle deletion event: ${error}`
+      );
+    }
+  }
+);
 
 /**
  * Responds to update events on firestore documents from firebase
