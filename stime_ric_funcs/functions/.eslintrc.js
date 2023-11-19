@@ -31,7 +31,7 @@ module.exports = {
       {
         code: 100,
         comments: 100,
-        ignorePattern: "^\\s*import|^\\s*export|^\\s*return",
+        ignorePattern: "^\\s*import|^\\s*export|^\\s*return|^\\s*logger",
       },
     ],
     indent: ["error", 2],
