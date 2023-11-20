@@ -9,8 +9,14 @@ import {SurveyTypes} from "../shared/shared_enums";
 import {
   handleSurveyInsertAndUpdate,
   processQualitySurveyDataForGs,
+  processQuantitySurveyDataForGs,
+  processUpdateEvents,
 } from "../shared/utils";
-import {qualitySurveyResultSheet} from "../shared/configs";
+import {
+  qualitySurveyResultSheet,
+  quantitySurveyCalResultSheet,
+  quantitySurveyGeneralResultSheet,
+} from "../shared/configs";
 import {
   deleteRowFromSheet,
   filterDocumentDataRange,
@@ -19,7 +25,6 @@ import {
 import {SheetInfoImpl} from "../models/sheet_info_model";
 // Set the maximum instances to 10 for all functions
 setGlobalOptions({maxInstances: 10});
-
 
 /**
  * Responds to delete events on survey documents
@@ -83,63 +88,42 @@ exports.onSurveyUpdated = onDocumentUpdated(
 
       // Access updated survey type
       const updatedSurveyType: SurveyTypes = updatedDocumentData.surveyType;
-
-      if (updatedSurveyType == SurveyTypes.Quality) {
-        console.log("Was a quality survey");
-
-        const docId = updateEvent.data?.after.id;
-        if (!docId) {
-          logger.error("Was not able to access document id in update logic");
-          return;
-        }
-        const qualitySurveyDataFromGs = await readDataFromSpreadsheet(
-          SheetInfoImpl.getReadA1NotationRange(qualitySurveyResultSheet)
-        );
-        const filterRange = filterDocumentDataRange(
-          qualitySurveyDataFromGs,
-          docId
-        );
-
-        const dataForGs = processQualitySurveyDataForGs(updatedDocumentData);
-
-        // if either of the firstRow or lastRow in range is <= 0
-        // This means that the said survey has never being saved to
-        // google sheet, in that case, add it
-        if (filterRange.firstRow <= 0 || filterRange.lastRow <= 0) {
-          await handleSurveyInsertAndUpdate(
-            [dataForGs],
-            qualitySurveyResultSheet,
-            docId,
-            true,
-            true
-          );
-          logger.info(
-            `Document with id: ${docId} info was not found in google sheet,
-            it's been added successfully`
-          );
-          return;
-        }
-
-        // In other cases, update the data already saved in google sheet
-        const rangeForUpdateString = SheetInfoImpl.getUpdateA1NotionRange(
-          qualitySurveyResultSheet,
-          filterRange
-        );
-        await handleSurveyInsertAndUpdate(
-          [dataForGs],
-          qualitySurveyResultSheet,
-          docId,
-          true,
-          false,
-          true,
-          rangeForUpdateString
-        );
-        logger.info(
-          `Document with id: ${docId} data was updated in google sheet successfully`
-        );
+      const docId = updateEvent.data?.after.id;
+      if (!docId) {
+        logger.error("Was not able to access document id in update logic");
         return;
       }
-      console.log("Was a quantity survey");
+
+      if (updatedSurveyType == SurveyTypes.Quality) {
+        const dataForGs = processQualitySurveyDataForGs(updatedDocumentData);
+        await processUpdateEvents(qualitySurveyResultSheet, docId, [dataForGs]);
+        return;
+      }
+
+      const dataForGs = processQuantitySurveyDataForGs(updatedDocumentData);
+      await processUpdateEvents(quantitySurveyGeneralResultSheet, docId, [
+        dataForGs.generalData,
+      ]);
+
+      const allCalsFromGoogleSheet = await readDataFromSpreadsheet(
+        SheetInfoImpl.getReadA1NotationRange(quantitySurveyCalResultSheet)
+      );
+      const calRanges = filterDocumentDataRange(allCalsFromGoogleSheet, docId);
+
+      if (calRanges.firstRow > 0) {
+        await deleteRowFromSheet(
+          quantitySurveyCalResultSheet.id,
+          calRanges.firstRow - 1,
+          calRanges.lastRow
+        );
+      }
+      await processUpdateEvents(
+        quantitySurveyCalResultSheet,
+        docId,
+        dataForGs.calData,
+        false
+      );
+      return;
     } catch (error) {
       logger.info(
         `An error occurred when trying to handle survey update event: ${error}`
@@ -168,7 +152,6 @@ exports.onNewSurveyCreated = onDocumentCreated(
       // Base on the current survey type, call on the helper function to
       // write data to google sheet
       if (surveyType == SurveyTypes.Quality) {
-        console.log("Was a quality survey");
         const docId = docEvent.data?.id;
         const forGs = processQualitySurveyDataForGs(newData);
         await handleSurveyInsertAndUpdate(

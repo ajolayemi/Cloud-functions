@@ -1,3 +1,8 @@
+export interface QuantitySurveyResultForGs {
+  generalData: Array<string | number>;
+  calData: Array<Array<string | number>>;
+}
+
 export interface QuantitySurveyGoogleSheetData {
   author: string;
   surveyShortCode: string;
@@ -6,7 +11,7 @@ export interface QuantitySurveyGoogleSheetData {
   variety: string;
   varietyId: string;
   quantitySurvey: FQuantitySurvey;
-  surveyDate?: string;
+  surveyDate: string;
 }
 
 export interface FQuantitySurvey {
