@@ -8,6 +8,7 @@ import {setGlobalOptions} from "firebase-functions/v2";
 import {SurveyTypes} from "../shared/shared_enums";
 import {
   handleSurveyInsertAndUpdate,
+  processDeleteEvents,
   processQualitySurveyDataForGs,
   processQuantitySurveyDataForGs,
   processUpdateEvents,
@@ -44,24 +45,13 @@ exports.onSurveyDeleted = onDocumentDeleted(
       }
       const deletedDocumentType: SurveyTypes = data.surveyType;
       if (deletedDocumentType == SurveyTypes.Quality) {
-        const qualitySurveyDataFromGs = await readDataFromSpreadsheet(
-          SheetInfoImpl.getReadA1NotationRange(qualitySurveyResultSheet)
-        );
-        const filterRange = filterDocumentDataRange(
-          qualitySurveyDataFromGs,
-          docId
-        );
+        await processDeleteEvents(qualitySurveyResultSheet, docId);
 
-        if (filterRange.firstRow <= 0 || filterRange.lastRow <= 0) return;
-
-        await deleteRowFromSheet(
-          qualitySurveyResultSheet.id,
-          filterRange.firstRow - 1,
-          filterRange.lastRow
-        );
         return;
       }
 
+      await processDeleteEvents(quantitySurveyCalResultSheet, docId);
+      await processDeleteEvents(quantitySurveyGeneralResultSheet, docId);
       return;
     } catch (error) {
       logger.error(
@@ -148,11 +138,11 @@ exports.onNewSurveyCreated = onDocumentCreated(
       }
       // Check survey type here
       const surveyType: SurveyTypes = newData.surveyType;
+      const docId = docEvent.data?.id;
 
       // Base on the current survey type, call on the helper function to
       // write data to google sheet
       if (surveyType == SurveyTypes.Quality) {
-        const docId = docEvent.data?.id;
         const forGs = processQualitySurveyDataForGs(newData);
         await handleSurveyInsertAndUpdate(
           [forGs],
@@ -165,7 +155,22 @@ exports.onNewSurveyCreated = onDocumentCreated(
         return;
       }
 
-      console.log("Was a quantity survey");
+      const forGs = processQuantitySurveyDataForGs(newData);
+      await handleSurveyInsertAndUpdate(
+        [forGs.generalData],
+        quantitySurveyGeneralResultSheet,
+        docId,
+        true,
+        true
+      );
+
+      await handleSurveyInsertAndUpdate(
+        forGs.calData,
+        quantitySurveyCalResultSheet,
+        docId,
+        false,
+        true
+      );
       return;
     } catch (error) {
       logger.info(

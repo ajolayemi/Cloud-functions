@@ -5,6 +5,7 @@ import {logger} from "firebase-functions/v2";
 import {QualitySurveyGoogleSheetResult} from "../models/quality_survey_gs";
 import {SheetInfo} from "../interfaces/shared_interfaces";
 import {
+  deleteRowFromSheet,
   filterDocumentDataRange,
   insertDataInSheet,
   readDataFromSpreadsheet,
@@ -62,6 +63,31 @@ export const handleSurveyInsertAndUpdate = async (
     await updateDataInSheet(rangeForUpdate, data);
     return;
   }
+};
+
+/**
+ *
+ * @param {SheetInfo} sheetToReference
+ * @param {string} docId
+ * @return {void}
+ */
+export const processDeleteEvents = async (
+  sheetToReference: SheetInfo,
+  docId: string
+) => {
+  const dataFromGs = await readDataFromSpreadsheet(
+    SheetInfoImpl.getReadA1NotationRange(sheetToReference)
+  );
+  const rangeToDelete = filterDocumentDataRange(dataFromGs, docId);
+
+  if (rangeToDelete.firstRow <= 0 || rangeToDelete.lastRow <= 0) return;
+
+  await deleteRowFromSheet(
+    sheetToReference.id,
+    rangeToDelete.firstRow - 1,
+    rangeToDelete.lastRow
+  );
+  return;
 };
 
 /**
