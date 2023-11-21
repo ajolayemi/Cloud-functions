@@ -107,7 +107,7 @@ export const insertDataInSheet = async (
     const insertResponse = await sheets.spreadsheets.values.append({
       spreadsheetId: _spreadSheetId,
       range: worksheetName,
-      valueInputOption: "RAW",
+      valueInputOption: "USER_ENTERED",
       requestBody: {
         values: dataToInsert,
       },
@@ -148,7 +148,7 @@ export const updateDataInSheet = async (
     const updateResponse = await sheets.spreadsheets.values.update({
       spreadsheetId: _spreadSheetId,
       range: rangeToUpdate,
-      valueInputOption: "RAW",
+      valueInputOption: "USER_ENTERED",
       requestBody: {
         values: updateRequestBodyValue,
       },
