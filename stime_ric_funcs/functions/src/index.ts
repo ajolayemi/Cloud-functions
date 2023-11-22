@@ -91,9 +91,6 @@ exports.onSurveyUpdated = onDocumentUpdated(
       }
 
       const dataForGs = processQuantitySurveyDataForGs(updatedDocumentData);
-      await processUpdateEvents(quantitySurveyGeneralResultSheet, docId, [
-        dataForGs.generalData,
-      ]);
 
       const allCalsFromGoogleSheet = await readDataFromSpreadsheet(
         SheetInfoImpl.getReadA1NotationRange(quantitySurveyCalResultSheet)
@@ -113,6 +110,10 @@ exports.onSurveyUpdated = onDocumentUpdated(
         dataForGs.calData,
         false
       );
+
+      await processUpdateEvents(quantitySurveyGeneralResultSheet, docId, [
+        dataForGs.generalData,
+      ]);
       return;
     } catch (error) {
       logger.info(
