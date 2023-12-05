@@ -31,3 +31,14 @@ export interface FilterSheetRangeInfo {
   firstRow: number;
   lastRow: number;
 }
+
+/**
+ * A representation of what user roles look like
+ */
+export interface UserRole {
+  isAdmin?: boolean;
+  isEditor?: boolean;
+  isViewer?: boolean;
+  isUser?: boolean;
+  isSuperUser?: boolean;
+}
