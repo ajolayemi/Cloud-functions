@@ -3,6 +3,7 @@ import {
   onDocumentCreated,
   onDocumentUpdated,
   onDocumentDeleted,
+  onDocumentWritten,
 } from "firebase-functions/v2/firestore";
 import {setGlobalOptions} from "firebase-functions/v2";
 import {SurveyTypes} from "../shared/shared_enums";
@@ -24,8 +25,44 @@ import {
   readDataFromSpreadsheet,
 } from "./google_sheet_utils";
 import {SheetInfoImpl} from "../models/sheet_info_model";
+import {getAuth} from "firebase-admin/auth";
+import {initializeApp} from "firebase-admin/app";
+import {UserRole} from "../interfaces/shared_interfaces";
+
 // Set the maximum instances to 10 for all functions
 setGlobalOptions({maxInstances: 10});
+
+initializeApp();
+/**
+ * Responds to updates in user info collection
+ */
+exports.updateUserCustomClaims = onDocumentWritten(
+  "users/{userId}",
+  async (userInfoEvent) => {
+    try {
+      // const userDocData = userInfoEvent.data;
+      const uid = userInfoEvent.params.userId;
+      const docData = userInfoEvent.data?.after.data();
+      let roleData: UserRole = {};
+
+      if (docData != null) {
+        const roleDataFromFirestore = docData["role"];
+        roleData = {
+          isAdmin: roleDataFromFirestore["isAdmin"],
+          isUser: roleDataFromFirestore["isUser"],
+          isEditor: roleDataFromFirestore["isEditor"],
+          isSuperUser: roleDataFromFirestore["isSuperUser"],
+          isViewer: roleDataFromFirestore["isViewer"],
+        };
+      }
+      await getAuth().setCustomUserClaims(uid, roleData);
+    } catch (error) {
+      logger.error(
+        `An error occurred while trying to handle user custom claims update: ${error}`
+      );
+    }
+  }
+);
 
 /**
  * Responds to delete events on survey documents
