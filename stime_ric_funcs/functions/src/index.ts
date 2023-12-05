@@ -71,7 +71,7 @@ exports.onSurveyDeleted = onDocumentDeleted(
   "survey/{docId}",
   async (deleteEvent) => {
     try {
-      const docId = deleteEvent.data?.id;
+      const docId = deleteEvent.params.docId;
       const data = deleteEvent.data?.data();
 
       if (!data || !docId) {
@@ -115,7 +115,7 @@ exports.onSurveyUpdated = onDocumentUpdated(
 
       // Access updated survey type
       const updatedSurveyType: SurveyTypes = updatedDocumentData.surveyType;
-      const docId = updateEvent.data?.after.id;
+      const docId = updateEvent.params.docId;
       if (!docId) {
         logger.error("Was not able to access document id in update logic");
         return;
@@ -176,7 +176,7 @@ exports.onNewSurveyCreated = onDocumentCreated(
       }
       // Check survey type here
       const surveyType: SurveyTypes = newData.surveyType;
-      const docId = docEvent.data?.id;
+      const docId = docEvent.params.docId;
 
       // Base on the current survey type, call on the helper function to
       // write data to google sheet
