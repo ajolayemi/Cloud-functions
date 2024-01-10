@@ -1,8 +1,7 @@
 import * as functions from "firebase-functions/v2";
 import * as logger from "firebase-functions/logger";
 
-
-
+// Triggered each time a new message is passed over to pub sub
 exports.nodePubSub = functions.pubsub.onMessagePublished(
   "projects/irrigazione-iot/topics/dataflow-pubsub",
   (event) => {
