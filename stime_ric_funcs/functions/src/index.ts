@@ -28,6 +28,7 @@ import {SheetInfoImpl} from "../models/sheet_info_model";
 import {getAuth} from "firebase-admin/auth";
 import {initializeApp} from "firebase-admin/app";
 import {UserRole} from "../interfaces/shared_interfaces";
+import {firestore} from "firebase-admin";
 
 // Set the maximum instances to 10 for all functions
 setGlobalOptions({maxInstances: 10});
@@ -45,6 +46,10 @@ exports.updateUserCustomClaims = onDocumentWritten(
       const docData = userInfoEvent.data?.after.data();
       let roleData: UserRole = {};
 
+      if (docData == null) {
+        return;
+      }
+
       if (docData != null) {
         const roleDataFromFirestore = docData["role"];
         roleData = {
@@ -55,7 +60,15 @@ exports.updateUserCustomClaims = onDocumentWritten(
           isViewer: roleDataFromFirestore["isViewer"],
         };
       }
+
+      // Set user custom claim
       await getAuth().setCustomUserClaims(uid, roleData);
+
+      // write to Firestore so the client app knows it needs to update
+      await firestore().doc(`metadata/${uid}`).set({
+        refreshTime: firestore.FieldValue.serverTimestamp(),
+      });
+      logger.log(`Custom claim set for user with email: ${docData["email"]}`);
     } catch (error) {
       logger.error(
         `An error occurred while trying to handle user custom claims update: ${error}`
